@@ -5,27 +5,34 @@ import pandas as pd
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 
-st.title("Manual Plant Sample ExG Analyzer 🌿")
+st.title("Wilt Measure 🌿")
 
 uploaded_file = st.file_uploader("Upload top-view plant image", type=["jpg", "jpeg", "png"])
 
-def calculate_exg(image):
-    B, G, R = cv2.split(image.astype(np.float32))
-    exg = 2 * G - R - B
+def calculate_exg(img):
+    # img should be a numpy array in RGB format
+    img = img.astype(np.float32)
+    r = img[..., 0]
+    g = img[..., 1]
+    b = img[..., 2]
+    exg = 2 * g - r - b
     return exg
 
-def calculate_vari(image):
-    B, G, R = cv2.split(image.astype(np.float32))
-    denominator = (G + R - B)
-    denominator[denominator == 0] = 1  # Prevent division by zero
-    vari = (G - R) / denominator
+def calculate_vari(img):
+    # img should be a numpy array in RGB format
+    img = img.astype(np.float32)
+    r = img[..., 0]
+    g = img[..., 1]
+    b = img[..., 2]
+    denominator = (g + r - b)
+    # Avoid division by zero
+    denominator[denominator == 0] = 1e-6
+    vari = (g - r) / denominator
     return vari
 
-if uploaded_file:
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    img = cv2.imdecode(file_bytes, 1)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
+if uploaded_file is not None:
+    image = Image.open(uploaded_file).convert("RGB")
+    img_rgb = np.array(image)
     # --- Background removal using ExG threshold ---
     exg = calculate_exg(img_rgb)
     exg_norm = cv2.normalize(exg, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
@@ -41,14 +48,7 @@ if uploaded_file:
 
     # --- Resize masked image for canvas display, but only shrink if too large ---
     orig_height, orig_width = masked_img.shape[:2]
-    # Let user pick display width, default 700, max is image width or 1000
-    display_width = st.slider(
-        "Canvas display width (px)",
-        min_value=300,
-        max_value=min(1000, orig_width),
-        value=min(700, orig_width),
-        step=10
-    )
+    display_width = min(700, orig_width)  # Fixed width, slider hidden
     scale_ratio = display_width / orig_width
     display_height = int(orig_height * scale_ratio)
     if scale_ratio != 1.0:
@@ -113,13 +113,13 @@ if uploaded_file:
                     mean_exg = 0
                     mean_vari = 0
 
-                true_green_value = mean_vari * green_pixel_count
+                total_vari = mean_vari * green_pixel_count
 
                 data.append({
                     "Sample": f"Plant {i}",
                     "Mean ExG": round(float(mean_exg), 2),
                     "Green Pixels": green_pixel_count,
-                    "True Green Value": round(float(true_green_value), 2)
+                    "Total VARI": round(float(total_vari), 2)
                 })
 
                 # Draw rectangle and label on annotated image
@@ -136,3 +136,18 @@ if uploaded_file:
         st.download_button("Download CSV", csv, "exg_results.csv", "text/csv")
     else:
         st.info("Draw rectangles on the image to analyze plant samples.")
+
+    # Add institute and contact info as a footer
+    st.markdown(
+        """
+        <hr>
+        <div style='text-align: center; font-size: 15px;'>
+            <b>PPL, Institute of Plant Breeding, UPLB</b><br>
+            Contact: <a href="mailto:jsmendoza5@up.edu.ph">jsmendoza5@up.edu.ph</a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.info("Please upload an image to begin.")
+    st.stop()
