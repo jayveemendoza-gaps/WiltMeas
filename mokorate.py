@@ -33,22 +33,23 @@ def calculate_vari(img):
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     img_rgb = np.array(image)
+
     # --- Background removal using ExG threshold ---
     exg = calculate_exg(img_rgb)
     exg_norm = cv2.normalize(exg, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     _, mask = cv2.threshold(exg_norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # Optional: Morphological opening to clean small noise
-    kernel = np.ones((3,3), np.uint8)
+    kernel = np.ones((3, 3), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
 
     # Apply mask to RGB image, set background pixels to white
     masked_img = img_rgb.copy()
     masked_img[mask == 0] = [255, 255, 255]
 
-    # --- Resize masked image for canvas display, but only shrink if too large ---
+    # --- Resize masked image for canvas display ---
     orig_height, orig_width = masked_img.shape[:2]
-    display_width = min(700, orig_width)  # Fixed width, slider hidden
+    display_width = min(700, orig_width)
     scale_ratio = display_width / orig_width
     display_height = int(orig_height * scale_ratio)
     if scale_ratio != 1.0:
@@ -60,32 +61,26 @@ if uploaded_file is not None:
 
     img_pil = Image.fromarray(masked_img_resized)
 
-    # Add horizontal scroll for the canvas
-    st.markdown(
-        """
-        <style>
-        .scrollable-canvas {overflow-x: auto;}
-        </style>
-        """,
-        unsafe_allow_html=True
+    # --- Display Original Image on Top ---
+    st.markdown("### Original Image")
+    st.image(img_rgb, caption="Original Image", use_column_width=True)
+
+    # --- Display Drawable Canvas Below ---
+    st.markdown("### Annotate the Background-Removed Image")
+    canvas_result = st_canvas(
+        fill_color="rgba(0, 255, 0, 0.3)",
+        stroke_width=3,
+        stroke_color="#0000FF",
+        background_image=img_pil,
+        update_streamlit=True,
+        height=display_height,
+        width=display_width,
+        drawing_mode="rect",
+        key="canvas",
     )
-    with st.container():
-        st.markdown('<div class="scrollable-canvas">', unsafe_allow_html=True)
-        canvas_result = st_canvas(
-            fill_color="rgba(0, 255, 0, 0.3)",
-            stroke_width=3,
-            stroke_color="#0000FF",
-            background_image=img_pil,
-            update_streamlit=True,
-            height=display_height,
-            width=display_width,
-            drawing_mode="rect",
-            key="canvas",
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
 
     data = []
-    annotated_image = masked_img.copy()  # Use background-removed image for annotation
+    annotated_image = masked_img.copy()
 
     if canvas_result.json_data is not None and canvas_result.json_data["objects"]:
         for i, shape in enumerate(canvas_result.json_data["objects"], start=1):
@@ -104,7 +99,6 @@ if uploaded_file is not None:
                 sample_mask = mask[top:bottom, left:right]
                 exg_sample = calculate_exg(sample)
                 vari_sample = calculate_vari(sample)
-                # Only consider plant pixels (mask > 0)
                 green_pixel_count = int(np.sum(sample_mask > 0))
                 if green_pixel_count > 0:
                     mean_exg = np.mean(exg_sample[sample_mask > 0])
