@@ -9,8 +9,8 @@ st.title("Wilt Measure 🌿")
 
 uploaded_file = st.file_uploader("Upload top-view plant image", type=["jpg", "jpeg", "png"])
 
+@st.cache_data
 def calculate_exg(img):
-    # img should be a numpy array in RGB format
     img = img.astype(np.float32)
     r = img[..., 0]
     g = img[..., 1]
@@ -18,21 +18,34 @@ def calculate_exg(img):
     exg = 2 * g - r - b
     return exg
 
+@st.cache_data
 def calculate_vari(img):
-    # img should be a numpy array in RGB format
     img = img.astype(np.float32)
     r = img[..., 0]
     g = img[..., 1]
     b = img[..., 2]
     denominator = (g + r - b)
-    # Avoid division by zero
-    denominator[denominator == 0] = 1e-6
+    denominator[denominator == 0] = 1e-6  # Avoid division by zero
     vari = (g - r) / denominator
     return vari
 
+def downscale_image(image, max_dim=800):
+    """Downscale the image to a maximum dimension for faster processing."""
+    w, h = image.size
+    scale = min(max_dim / w, max_dim / h, 1.0)
+    if scale < 1.0:
+        new_size = (int(w * scale), int(h * scale))
+        return image.resize(new_size, Image.LANCZOS)
+    return image
+
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-    img_rgb = np.array(image)
+    try:
+        image = Image.open(uploaded_file).convert("RGB")
+        image = downscale_image(image)  # Downscale immediately
+        img_rgb = np.array(image)
+    except Exception as e:
+        st.error(f"Error loading image: {e}")
+        st.stop()
 
     # --- Background removal using ExG threshold ---
     exg = calculate_exg(img_rgb)
