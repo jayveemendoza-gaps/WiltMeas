@@ -292,3 +292,11 @@ else:
     st.markdown("- Use images smaller than 5MB")
     st.markdown("- Prefer JPG format for faster loading")
     st.markdown("- Avoid uploading very large or high-res images")
+    
+    st.divider()
+    st.markdown("### 📁 Resources")
+    st.markdown("[📸 Sample Pictures](https://drive.google.com/drive/folders/1bXmGzeGQUnW7WsKPiUoYEkyfeDChnIj-)")
+    
+    st.divider()
+    st.markdown("### 📧 Contact")
+    st.markdown("For inquiries: **jsmendoza5@up.edu.ph**")

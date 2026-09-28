@@ -128,6 +128,15 @@ Downscales image for optimization.
 
 [Add contribution guidelines]
 
+## Resources
+
+**Sample Images**: Access sample plant images for testing and reference:
+- [Google Drive Folder - Sample Pictures](https://drive.google.com/drive/folders/1bXmGzeGQUnW7WsKPiUoYEkyfeDChnIj-)
+
 ## Support
 
 For issues and feature requests, please open an issue on GitHub.
+
+## Contact
+
+For inquiries, please contact: **jsmendoza5@up.edu.ph**
